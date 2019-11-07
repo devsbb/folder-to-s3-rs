@@ -83,14 +83,8 @@ fn get_key(bucket_folder: &str, base_folder: &PathBuf, local_file: &PathBuf) -> 
     Ok(output.join("/"))
 }
 
-fn upload_file(
-    bucket: &str,
-    key: String,
-    file_path: &PathBuf,
-    cli: &S3Client,
-) -> Result<()> {
-    let mut file = File::open(file_path)
-        .context("Error opening file to upload")?;
+fn upload_file(bucket: &str, key: String, file_path: &PathBuf, cli: &S3Client) -> Result<()> {
+    let mut file = File::open(file_path).context("Error opening file to upload")?;
 
     // TODO: Use async version to avoid memory issues
     let mut file_data = vec![];

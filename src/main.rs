@@ -3,6 +3,7 @@ use std::io::Read;
 use std::path::PathBuf;
 
 use failure::ResultExt;
+use log::{debug, trace};
 use rusoto_core::Region;
 use rusoto_s3::{HeadBucketRequest, PutObjectRequest, S3Client, S3};
 use structopt::StructOpt;
@@ -36,7 +37,11 @@ fn get_all_files(folder: &PathBuf) -> Result<Vec<PathBuf>> {
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
+
     let options: Options = Options::from_args();
+    debug!("Starting execution with {:#?}", options);
+
     if options.remote_folder.scheme() != "s3" {
         eprintln!(
             "Cannot use {} as schema, only s3",
@@ -62,6 +67,7 @@ fn main() -> Result<()> {
     .with_context(|_| format!("Failed to check if bucket {:?} exists", bucket))?;
 
     let bucket_folder = &options.remote_folder.path()[1..];
+    debug!("Bucket folder will be {}", bucket_folder);
 
     for file_path in get_all_files(&options.local_folder)? {
         let key = get_key(bucket_folder, &options.local_folder, &file_path)?;
@@ -91,6 +97,7 @@ fn upload_file(bucket: &str, key: String, file_path: &PathBuf, cli: &S3Client) -
     file.read_to_end(&mut file_data)
         .context("Error reading file's content")?;
     let digest = md5::compute(&file_data);
+    debug!("Calculated digest {:x}", digest);
     let request = PutObjectRequest {
         bucket: bucket.to_string(),
         body: Some(file_data.into()),
@@ -98,6 +105,7 @@ fn upload_file(bucket: &str, key: String, file_path: &PathBuf, cli: &S3Client) -
         key,
         ..Default::default()
     };
+    trace!("About to send this {:#?}", request);
     let _response = cli.put_object(request).sync()?;
     Ok(())
 }

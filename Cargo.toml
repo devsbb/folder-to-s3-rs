@@ -1,6 +1,6 @@
 [package]
 name = "folder-to-s3"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jayson Reis <santosdosreis@gmail.com>"]
 edition = "2018"
 
@@ -8,7 +8,9 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.11.0"
+env_logger = "0.7.1"
 failure = "0.1.6"
+log = "0.4.8"
 md5 = "0.7.0"
 rusoto_core = "0.41.0"
 rusoto_s3 = "0.41.0"

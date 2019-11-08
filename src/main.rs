@@ -15,6 +15,8 @@ type Result<T> = std::result::Result<T, failure::Error>;
 struct Options {
     #[structopt(short = "r", long, help = "AWS Region to connect to")]
     aws_region: Region,
+    #[structopt(short = "p", help = "Make the file publicly available")]
+    make_public: bool,
     local_folder: PathBuf,
     remote_folder: Url,
 }
@@ -72,7 +74,7 @@ fn main() -> Result<()> {
     for file_path in get_all_files(&options.local_folder)? {
         let key = get_key(bucket_folder, &options.local_folder, &file_path)?;
         println!("Uploading {} to {}", file_path.to_string_lossy(), key);
-        upload_file(&bucket, key, &file_path, &cli)?;
+        upload_file(&bucket, key, &file_path, options.make_public, &cli)?;
         println!("Done");
     }
 
@@ -89,7 +91,13 @@ fn get_key(bucket_folder: &str, base_folder: &PathBuf, local_file: &PathBuf) -> 
     Ok(output.join("/"))
 }
 
-fn upload_file(bucket: &str, key: String, file_path: &PathBuf, cli: &S3Client) -> Result<()> {
+fn upload_file(
+    bucket: &str,
+    key: String,
+    file_path: &PathBuf,
+    make_public: bool,
+    cli: &S3Client,
+) -> Result<()> {
     let mut file = File::open(file_path).context("Error opening file to upload")?;
 
     // TODO: Use async version to avoid memory issues
@@ -98,9 +106,17 @@ fn upload_file(bucket: &str, key: String, file_path: &PathBuf, cli: &S3Client) -
         .context("Error reading file's content")?;
     let digest = md5::compute(&file_data);
     debug!("Calculated digest {:x}", digest);
+
+    let acl = if make_public {
+        Some("public-read".into())
+    } else {
+        None
+    };
+
     let request = PutObjectRequest {
         bucket: bucket.to_string(),
         body: Some(file_data.into()),
+        acl,
         content_md5: Some(base64::encode(digest.as_ref())),
         key,
         ..Default::default()

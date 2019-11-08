@@ -14,7 +14,7 @@ type Result<T> = std::result::Result<T, failure::Error>;
 #[derive(StructOpt, Debug)]
 struct Options {
     #[structopt(short = "r", long, help = "AWS Region to connect to")]
-    aws_region: Region,
+    aws_region: Option<Region>,
     #[structopt(short = "p", help = "Make the file publicly available")]
     make_public: bool,
     local_folder: PathBuf,
@@ -60,13 +60,13 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    let cli = S3Client::new(options.aws_region);
+    let cli = S3Client::new(options.aws_region.unwrap_or_else(Region::default));
     let bucket = options.remote_folder.host().unwrap().to_string();
     cli.head_bucket(HeadBucketRequest {
         bucket: bucket.clone(),
     })
     .sync()
-    .with_context(|_| format!("Failed to check if bucket {:?} exists", bucket))?;
+    .with_context(|_| format!("Failed to check if bucket {:?} exists. Check if the credentials you are using have s3:HeadBucket permission.", bucket))?;
 
     let bucket_folder = &options.remote_folder.path()[1..];
     debug!("Bucket folder will be {}", bucket_folder);
